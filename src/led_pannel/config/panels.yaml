@@ -3,29 +3,121 @@ canvas:
   height: 640
 
 panel_size:
-  width: 32   # pixels per panel (update when you know exact size)
-  height: 32
+  width: 64    # pixels per panel
+  height: 64
+  physical_cm: 19  # physical size in cm (for reference)
 
-# Each panel entry: id, grid position (row/col), and enabled flag.
-# row/col are 0-indexed positions in the physical grid.
-# To replace a panel: set enabled: false, or change its row/col.
+# 10x10 grid of panels = 640x640 pixels total
+# row/col are 0-indexed (0-9)
+# To replace a panel: set enabled: false
 panels:
-  - id: "panel_0"
-    row: 0
-    col: 0
-    enabled: true
 
-  - id: "panel_1"
-    row: 0
-    col: 1
-    enabled: true
+  - { id: "panel_0_0", row: 0, col: 0, enabled: true }
+  - { id: "panel_0_1", row: 0, col: 1, enabled: true }
+  - { id: "panel_0_2", row: 0, col: 2, enabled: true }
+  - { id: "panel_0_3", row: 0, col: 3, enabled: true }
+  - { id: "panel_0_4", row: 0, col: 4, enabled: true }
+  - { id: "panel_0_5", row: 0, col: 5, enabled: true }
+  - { id: "panel_0_6", row: 0, col: 6, enabled: true }
+  - { id: "panel_0_7", row: 0, col: 7, enabled: true }
+  - { id: "panel_0_8", row: 0, col: 8, enabled: true }
+  - { id: "panel_0_9", row: 0, col: 9, enabled: true }
 
-  - id: "panel_2"
-    row: 1
-    col: 0
-    enabled: true
+  - { id: "panel_1_0", row: 1, col: 0, enabled: true }
+  - { id: "panel_1_1", row: 1, col: 1, enabled: true }
+  - { id: "panel_1_2", row: 1, col: 2, enabled: true }
+  - { id: "panel_1_3", row: 1, col: 3, enabled: true }
+  - { id: "panel_1_4", row: 1, col: 4, enabled: true }
+  - { id: "panel_1_5", row: 1, col: 5, enabled: true }
+  - { id: "panel_1_6", row: 1, col: 6, enabled: true }
+  - { id: "panel_1_7", row: 1, col: 7, enabled: true }
+  - { id: "panel_1_8", row: 1, col: 8, enabled: true }
+  - { id: "panel_1_9", row: 1, col: 9, enabled: true }
 
-  - id: "panel_3"
-    row: 1
-    col: 1
-    enabled: true
+  - { id: "panel_2_0", row: 2, col: 0, enabled: true }
+  - { id: "panel_2_1", row: 2, col: 1, enabled: true }
+  - { id: "panel_2_2", row: 2, col: 2, enabled: true }
+  - { id: "panel_2_3", row: 2, col: 3, enabled: true }
+  - { id: "panel_2_4", row: 2, col: 4, enabled: true }
+  - { id: "panel_2_5", row: 2, col: 5, enabled: true }
+  - { id: "panel_2_6", row: 2, col: 6, enabled: true }
+  - { id: "panel_2_7", row: 2, col: 7, enabled: true }
+  - { id: "panel_2_8", row: 2, col: 8, enabled: true }
+  - { id: "panel_2_9", row: 2, col: 9, enabled: true }
+
+  - { id: "panel_3_0", row: 3, col: 0, enabled: true }
+  - { id: "panel_3_1", row: 3, col: 1, enabled: true }
+  - { id: "panel_3_2", row: 3, col: 2, enabled: true }
+  - { id: "panel_3_3", row: 3, col: 3, enabled: true }
+  - { id: "panel_3_4", row: 3, col: 4, enabled: true }
+  - { id: "panel_3_5", row: 3, col: 5, enabled: true }
+  - { id: "panel_3_6", row: 3, col: 6, enabled: true }
+  - { id: "panel_3_7", row: 3, col: 7, enabled: true }
+  - { id: "panel_3_8", row: 3, col: 8, enabled: true }
+  - { id: "panel_3_9", row: 3, col: 9, enabled: true }
+
+  - { id: "panel_4_0", row: 4, col: 0, enabled: true }
+  - { id: "panel_4_1", row: 4, col: 1, enabled: true }
+  - { id: "panel_4_2", row: 4, col: 2, enabled: true }
+  - { id: "panel_4_3", row: 4, col: 3, enabled: true }
+  - { id: "panel_4_4", row: 4, col: 4, enabled: true }
+  - { id: "panel_4_5", row: 4, col: 5, enabled: true }
+  - { id: "panel_4_6", row: 4, col: 6, enabled: true }
+  - { id: "panel_4_7", row: 4, col: 7, enabled: true }
+  - { id: "panel_4_8", row: 4, col: 8, enabled: true }
+  - { id: "panel_4_9", row: 4, col: 9, enabled: true }
+
+  - { id: "panel_5_0", row: 5, col: 0, enabled: true }
+  - { id: "panel_5_1", row: 5, col: 1, enabled: true }
+  - { id: "panel_5_2", row: 5, col: 2, enabled: true }
+  - { id: "panel_5_3", row: 5, col: 3, enabled: true }
+  - { id: "panel_5_4", row: 5, col: 4, enabled: true }
+  - { id: "panel_5_5", row: 5, col: 5, enabled: true }
+  - { id: "panel_5_6", row: 5, col: 6, enabled: true }
+  - { id: "panel_5_7", row: 5, col: 7, enabled: true }
+  - { id: "panel_5_8", row: 5, col: 8, enabled: true }
+  - { id: "panel_5_9", row: 5, col: 9, enabled: true }
+
+  - { id: "panel_6_0", row: 6, col: 0, enabled: true }
+  - { id: "panel_6_1", row: 6, col: 1, enabled: true }
+  - { id: "panel_6_2", row: 6, col: 2, enabled: true }
+  - { id: "panel_6_3", row: 6, col: 3, enabled: true }
+  - { id: "panel_6_4", row: 6, col: 4, enabled: true }
+  - { id: "panel_6_5", row: 6, col: 5, enabled: true }
+  - { id: "panel_6_6", row: 6, col: 6, enabled: true }
+  - { id: "panel_6_7", row: 6, col: 7, enabled: true }
+  - { id: "panel_6_8", row: 6, col: 8, enabled: true }
+  - { id: "panel_6_9", row: 6, col: 9, enabled: true }
+
+  - { id: "panel_7_0", row: 7, col: 0, enabled: true }
+  - { id: "panel_7_1", row: 7, col: 1, enabled: true }
+  - { id: "panel_7_2", row: 7, col: 2, enabled: true }
+  - { id: "panel_7_3", row: 7, col: 3, enabled: true }
+  - { id: "panel_7_4", row: 7, col: 4, enabled: true }
+  - { id: "panel_7_5", row: 7, col: 5, enabled: true }
+  - { id: "panel_7_6", row: 7, col: 6, enabled: true }
+  - { id: "panel_7_7", row: 7, col: 7, enabled: true }
+  - { id: "panel_7_8", row: 7, col: 8, enabled: true }
+  - { id: "panel_7_9", row: 7, col: 9, enabled: true }
+
+  - { id: "panel_8_0", row: 8, col: 0, enabled: true }
+  - { id: "panel_8_1", row: 8, col: 1, enabled: true }
+  - { id: "panel_8_2", row: 8, col: 2, enabled: true }
+  - { id: "panel_8_3", row: 8, col: 3, enabled: true }
+  - { id: "panel_8_4", row: 8, col: 4, enabled: true }
+  - { id: "panel_8_5", row: 8, col: 5, enabled: true }
+  - { id: "panel_8_6", row: 8, col: 6, enabled: true }
+  - { id: "panel_8_7", row: 8, col: 7, enabled: true }
+  - { id: "panel_8_8", row: 8, col: 8, enabled: true }
+  - { id: "panel_8_9", row: 8, col: 9, enabled: true }
+
+  - { id: "panel_9_0", row: 9, col: 0, enabled: true }
+  - { id: "panel_9_1", row: 9, col: 1, enabled: true }
+  - { id: "panel_9_2", row: 9, col: 2, enabled: true }
+  - { id: "panel_9_3", row: 9, col: 3, enabled: true }
+  - { id: "panel_9_4", row: 9, col: 4, enabled: true }
+  - { id: "panel_9_5", row: 9, col: 5, enabled: true }
+  - { id: "panel_9_6", row: 9, col: 6, enabled: true }
+  - { id: "panel_9_7", row: 9, col: 7, enabled: true }
+  - { id: "panel_9_8", row: 9, col: 8, enabled: true }
+  - { id: "panel_9_9", row: 9, col: 9, enabled: true }
