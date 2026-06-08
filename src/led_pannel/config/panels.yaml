@@ -1,0 +1,31 @@
+canvas:
+  width: 640
+  height: 640
+
+panel_size:
+  width: 32   # pixels per panel (update when you know exact size)
+  height: 32
+
+# Each panel entry: id, grid position (row/col), and enabled flag.
+# row/col are 0-indexed positions in the physical grid.
+# To replace a panel: set enabled: false, or change its row/col.
+panels:
+  - id: "panel_0"
+    row: 0
+    col: 0
+    enabled: true
+
+  - id: "panel_1"
+    row: 0
+    col: 1
+    enabled: true
+
+  - id: "panel_2"
+    row: 1
+    col: 0
+    enabled: true
+
+  - id: "panel_3"
+    row: 1
+    col: 1
+    enabled: true

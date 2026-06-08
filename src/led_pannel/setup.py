@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/config', ['config/panels.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,6 +27,7 @@ setup(
         'console_scripts': [
             'leds = led_pannel.leds:main',
             'draw_cv = led_pannel.draw_cv:main',
+            'panel_manager = led_pannel.panel_manager:main',
         ],
     },
 )

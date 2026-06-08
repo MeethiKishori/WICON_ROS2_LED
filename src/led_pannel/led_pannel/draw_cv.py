@@ -1,14 +1,18 @@
+import os
+
+import yaml
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 import cv2
 import numpy as np
 
-width = 640
-height = 640
+#width = 640
+#height = 640
 
 scale = 10
-canvas = np.zeros((height, width, 3), dtype=np.uint8)
+
 
 
 class drawpath_cv(Node):
@@ -18,6 +22,10 @@ class drawpath_cv(Node):
         self.moved = False
         self.last_x, self.last_y = 0, 0
         
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'panels.yaml')
+
+        self.load_config(config_path)
+
         self.create_timer(0.02,self.publish_frames)
         self.publish_led=self.create_publisher(Image,'led/frames_raw',10)
 
@@ -27,6 +35,16 @@ class drawpath_cv(Node):
         
         cv2.setMouseCallback('Draw Path', self.mouse_moved)
 
+        self.canvas = np.zeros((self.canvas_h, self.canvas_w, 3), dtype=np.uint8)
+
+    def load_config(self, path):
+        with open(path, 'r') as f:
+            cfg = yaml.safe_load(f)
+
+        
+        self.canvas_w = cfg['canvas']['width']
+        self.canvas_h = cfg['canvas']['height']
+
 
     def publish_frames(self):
 
@@ -34,14 +52,14 @@ class drawpath_cv(Node):
 
          msg.header.stamp = self.get_clock().now().to_msg()
          msg.header.frame_id = 'CV window'
-         msg.width = width
-         msg.height = height
+         msg.width = self.canvas_w
+         msg.height = self.canvas_h
          msg.encoding = 'bgr8'
-         msg.step = width * 3
-         msg.data = canvas.tobytes()
+         msg.step = self.canvas_w * 3
+         msg.data = self.canvas.tobytes()
          self.publish_led.publish(msg)
 
-         cv2.imshow('Draw Path', canvas)
+         cv2.imshow('Draw Path', self.canvas)
          cv2.waitKey(1)
     
 
@@ -55,7 +73,7 @@ class drawpath_cv(Node):
                 self.last_x, self.last_y = x, y
 
         elif event == cv2.EVENT_MOUSEMOVE and self.moved:
-                cv2.line(canvas, (self.last_x, self.last_y), (x,y), (0,200,133), 5)
+                cv2.line(self.canvas, (self.last_x, self.last_y), (x,y), (0,200,133), 5)
                 self.last_x, self.last_y = x, y
         
         elif event == cv2.EVENT_LBUTTONUP:
