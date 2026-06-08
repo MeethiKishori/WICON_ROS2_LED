@@ -36,10 +36,14 @@ class drawpath_cv(Node):
          msg.header.frame_id = 'CV window'
          msg.width = width
          msg.height = height
+         msg.encoding = 'bgr8'
+         msg.step = width * 3
+         msg.data = canvas.tobytes()
          self.publish_led.publish(msg)
-         
+
          cv2.imshow('Draw Path', canvas)
          cv2.waitKey(1)
+    
 
 
 
