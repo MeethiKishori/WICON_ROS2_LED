@@ -1,3 +1,12 @@
+Currently mapping via nav2_mobile_robot
+scaling to 640x640 
+
+#In grogress
+
+
+
+
+-------------------------------------------------------
 It has nav2 mobile robot forked from 
 
 > Forked from [MeethiKishori/simple_nav2_example](https://github.com/MeethiKishori/simple_nav2_example)
@@ -19,4 +28,4 @@ It has nav2 mobile robot forked from
 - RViz for visualization
 
 
-
+----------------------------------------------------
