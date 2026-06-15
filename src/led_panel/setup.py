@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'led_pannel'
+package_name = 'led_panel'
 
 setup(
     name=package_name,
@@ -25,9 +25,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'leds = led_pannel.leds:main',
-            'draw_cv = led_pannel.draw_cv:main',
-            'panel_manager = led_pannel.panel_manager:main',
+            'leds = led_panel.leds:main',
+            'draw_cv = led_panel.draw_cv:main',
+            'panel_manager = led_panel.panel_manager:main',
         ],
     },
 )
