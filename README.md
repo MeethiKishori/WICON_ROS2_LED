@@ -1,7 +1,7 @@
 Currently mapping via nav2_mobile_robot
 scaling to 640x640 
 
-#In grogress
+# In grogress
 
 
 
