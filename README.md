@@ -1,7 +1,6 @@
 It has nav2 mobile robot forked from 
 
-> Forked from [MeethiKishori/simple_nav2_example](https://github.com/MeethiKishori/simple_nav2_example). Bug fixes applied to get Nav2 autonomous navigation working — see [Code changes from original](#code-changes-from-original-what-was-fixed) section.
-
+> Forked from [MeethiKishori/simple_nav2_example](https://github.com/MeethiKishori/simple_nav2_example)
 > originally forged from abubakar-mughal97/nav2_mobile_robot
 
 # Features
