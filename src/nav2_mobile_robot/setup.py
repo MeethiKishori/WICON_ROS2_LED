@@ -30,6 +30,8 @@ setup(
                 "config/nav.yaml",
                 "map/map.yaml",
                 "map/map.pgm",
+                "map/map_led.pgm",
+                "map/map_led.yaml",
             ],
         ),
     ],
