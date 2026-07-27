@@ -8,7 +8,7 @@ import os
 
 
 MAP_PATH = os.path.join(
-    get_package_share_directory('nav2_mobile_robot'), 'map_led.pgm'
+    get_package_share_directory('nav2_mobile_robot'), 'map_led2.pgm'
 )
 
 PANEL_SIZE = 640

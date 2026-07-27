@@ -1,6 +1,5 @@
-import os
-
 import yaml
+from pathlib import Path
 
 import rclpy
 from rclpy.node import Node
@@ -22,8 +21,7 @@ class drawpath_cv(Node):
         self.moved = False
         self.last_x, self.last_y = 0, 0
         
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'panels.yaml')
-
+        config_path = Path(__file__).resolve().parent.parent / 'config' / 'panels.yaml'
         self.load_config(config_path)
 
         self.create_timer(0.02,self.publish_frames)

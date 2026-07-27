@@ -32,6 +32,8 @@ setup(
                 "map/map.pgm",
                 "map/map_led.pgm",
                 "map/map_led.yaml",
+                "map/map_led2.pgm",
+                "map/map_led2.yaml",
             ],
         ),
     ],

@@ -20,3 +20,4 @@ row 2: data[3840 : 5760]
 colcon build --symlink-install
 
 ros2 topic echo /led/frames_raw --once | grep -A5 "data:"
+in ROS2 maps from SLAM toolbox is saved in map.pgm

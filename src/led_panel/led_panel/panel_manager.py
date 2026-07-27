@@ -2,53 +2,39 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 import numpy as np
+from pathlib import Path
 import yaml
-import os
 
 
 class PanelManager(Node):
 
     def __init__(self):
         super().__init__('panel_manager')
-        
-        yaml_path = os.path.join(os.path.dirname(__file__), '..','..', 'config', 'panels.yaml')
+
+        yaml_path = Path(__file__).resolve().parent.parent / 'config' / 'panels.yaml'
         self.load_config(yaml_path)
 
-        self.logger.info(
-            f'canva size is {self.canva_width} x {self.canva_height}'
-            f'canva panel size is {self.panel_width} x {self.panel_heigh}'
-            f'canva has {len(self.panels)} no. of panels'
-
+        self.get_logger().info(
+            f'canvas size is {self.canvas_w} x {self.canvas_h}, '
+            f'panel size is {self.panel_w} x {self.panel_h}, '
+            f'{len(self.panels)} panels loaded'
         )
-
-        self.publish_me = self.panel_published()
 
         self.panel_publishers = self.create_panel_publishers()
 
-        self.create_subscription(Image, 'led/frames_raw', self.on_frame, 10)
-        self.get_logger().info(f'Panel manager ready — {len(self.panels)} panels loaded')
-    
-    def panel_published(self):
-        publishers = {}
-        for panel in self.panels:
-            topic = 
+        self.sub = self.create_subscription(Image, 'led/frames_raw', self.on_frame, 10)
+        self.get_logger().info('Panel manager ready')
 
-
-    def load_config(self,yaml_path):
-        
+    def load_config(self, yaml_path):
         with open(yaml_path, 'r') as f:
-              config = yaml.safe_load(f)
+            config = yaml.safe_load(f)
 
-        self.canva_width = config['canvas']['width']
-        self.canva_height = config['canvas']['height']
-        self.panel_width = config['panel_size']['width']
-        self.panel_heigh = config['panel_size']['height']
-        self.panels = []
-        for p in config['panels']:
-            if p['enabled'] == True:
-                self.panels.append(p)
+        self.canvas_w = config['canvas']['width']
+        self.canvas_h = config['canvas']['height']
+        self.panel_w  = config['panel_size']['width']
+        self.panel_h  = config['panel_size']['height']
+        self.panels   = [p for p in config['panels'] if p['enabled']]
 
-    
     def create_panel_publishers(self):
         publishers = {}
         for panel in self.panels:
@@ -69,32 +55,29 @@ class PanelManager(Node):
             x1 = x0 + self.panel_w
 
             if y1 > self.canvas_h or x1 > self.canvas_w:
-                self.get_logger().warn(
+                self.get_logger().warning(
                     f"Panel {panel['id']} at ({row},{col}) is out of canvas bounds — skipping"
                 )
                 continue
 
             slice_img = canvas[y0:y1, x0:x1]
             self.publish_panel(panel['id'], slice_img, msg.header)
-
-            # --- stub: replace this with actual hardware send ---
             self.send_to_hardware(panel['id'], slice_img)
 
     def publish_panel(self, panel_id, pixels, header):
         msg = Image()
-        msg.header = header
+        msg.header   = header
         msg.height, msg.width = pixels.shape[:2]
         msg.encoding = 'bgr8'
-        msg.step = msg.width * 3
-        msg.data = pixels.tobytes()
-        self.publish_me[panel_id].publish(msg)
+        msg.step     = msg.width * 3
+        msg.data     = pixels.tobytes()
+        self.panel_publishers[panel_id].publish(msg)
 
     def send_to_hardware(self, panel_id, pixels):
         # TODO: implement hardware-specific protocol here
-        # pixels is a numpy array of shape (panel_h, panel_w, 3) dtype uint8
-        # RGB order: pixels[..., ::-1] to convert BGR -> RGB if needed
+        # pixels is (panel_h, panel_w, 3) uint8, BGR order
+        # convert to RGB: pixels[..., ::-1]
         pass
-
 
 
 def main():
@@ -105,9 +88,10 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    finally
+    finally:
         node.destroy_node()
         rclpy.shutdown()
-    
+
+
 if __name__ == '__main__':
     main()
