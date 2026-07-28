@@ -25,6 +25,8 @@ setup(
                 "urdf/odom_plugin.xacro",
                 "rviz/rviz.rviz",
                 "worlds/maze.sdf",
+                "worlds/small_world.sdf",
+                "worlds/small_maze.sdf",
                 "config/slam.yaml",
                 "config/amcl.yaml",
                 "config/nav.yaml",

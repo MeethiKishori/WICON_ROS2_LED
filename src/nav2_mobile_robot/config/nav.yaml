@@ -41,7 +41,7 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
+      required_movement_radius: 0.1  # 0.5 is a quarter of a 2x2m room; fires on normal manoeuvring
       movement_time_allowance: 10.0
     # Goal checker parameters
     #precise_goal_checker:
@@ -52,11 +52,11 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.10  # 0.25 is 1/8 of a 2x2m room
       yaw_goal_tolerance: 0.25
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
+      time_steps: 30  # 1.5s horizon; 56 looked 1.4m ahead, wider than the room
       model_dt: 0.05
       batch_size: 2000
       ax_max: 3.0
@@ -66,12 +66,12 @@ controller_server:
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
-      vx_max: 0.5
+      vx_max: 0.3
       vx_min: -0.35
       vy_max: 0.5
       wz_max: 1.9
       iteration_count: 1
-      prune_distance: 1.7
+      prune_distance: 0.6  # was 1.7, longer than the room is wide
       transform_tolerance: 0.1
       temperature: 0.3
       gamma: 0.015
@@ -162,12 +162,12 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.22
+      robot_radius: 0.18  # base_radius 0.15 in the xacro, plus margin
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.70
+        inflation_radius: 0.25  # 2x2m room: 0.70 inflates every cell, leaving no free space
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -200,7 +200,7 @@ global_costmap:
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
-      robot_radius: 0.22
+      robot_radius: 0.18  # base_radius 0.15 in the xacro, plus margin
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -224,7 +224,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.7
+        inflation_radius: 0.25  # 2x2m room: 0.70 inflates every cell, leaving no free space
       always_send_full_costmap: True
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.

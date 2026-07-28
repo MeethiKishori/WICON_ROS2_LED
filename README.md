@@ -16,7 +16,6 @@ Core package for the LED floor. Contains four nodes:
 |---|---|---|
 | `leds` | `ros2 run led_panel leds` | Base LED node / heartbeat |
 | `draw_cv` | `ros2 run led_panel draw_cv` | OpenCV canvas — draw paths with mouse, publishes to `led/frames_raw` |
-| `panel_manager` | `ros2 run led_panel panel_manager` | Subscribes to `led/frames_raw`, slices the 640×640 frame into per-panel images and publishes each to `led/panel/<id>` |
 | `show_map` | `ros2 run led_panel show_map` | Loads `map_led.pgm`, resizes to 640×640, colourises and publishes to `led/frames_raw` |
 
 **Panel layout:** 10×10 grid, each panel 64×64 px (≈19 cm physical). Configured in `config/panels.yaml`.
@@ -29,12 +28,14 @@ Differential drive robot simulation with full Nav2 stack.
 
 | Launch file | Command | Description |
 |---|---|---|
-| `display.launch.py` | `ros2 launch nav2_mobile_robot display.launch.py` | RViz visualisation only |
+| `display.launch.py` | `ros2 launch nav2_mobile_robot display.launch.py` | RViz, URDF only — no simulator running |
 | `gazebo.launch.py` | `ros2 launch nav2_mobile_robot gazebo.launch.py` | Robot + Gazebo simulation |
 | `slam.launch.py` | `ros2 launch nav2_mobile_robot slam.launch.py` | SLAM Toolbox mapping |
 | `map_server.launch.py` | `ros2 launch nav2_mobile_robot map_server.launch.py` | Serve a saved map |
 | `amcl.launch.py` | `ros2 launch nav2_mobile_robot amcl.launch.py` | Localisation with AMCL |
 | `navigation.launch.py` | `ros2 launch nav2_mobile_robot navigation.launch.py` | Full Nav2 autonomous navigation |
+
+> Alongside a running Gazebo, every launch file above except `gazebo.launch.py` needs `use_sim_time:=true`, and `display.launch.py` also needs `standalone:=false`. See Mode 1 for the exact commands.
 
 ### `rosbot` (ament_cmake)
 C++ package skeleton — placeholder for hardware interface code.
@@ -45,8 +46,7 @@ C++ package skeleton — placeholder for hardware interface code.
 
 | Topic | Type | Description |
 |---|---|---|
-| `led/frames_raw` | `sensor_msgs/Image` | Full 640×640 BGR frame — input to `panel_manager` |
-| `led/panel/<id>` | `sensor_msgs/Image` | 64×64 BGR slice for each individual panel |
+| `led/frames_raw` | `sensor_msgs/Image` | Full 640×640 BGR frame published by `show_map`, `show_path`, `draw_cv` |
 
 ---
 
@@ -77,16 +77,53 @@ ros2 run led_panel show_map
 ros2 run led_panel draw_cv
 ```
 
-**Start panel manager (slice & distribute frames):**
-```bash
-ros2 run led_panel panel_manager
+##how to pgm to png
+```
+python3 pgm_to_png.py src/nav2_mobile_robot/map/map_2109.pgm
 ```
 
 ---
 
-## Autonomous Exploration + SLAM (no teleop)
+## Mode 1 — Nav2 Goal + SLAM (manual goal in RViz)
 
-Uses [`m-explore-ros2`](https://github.com/robo-friends/m-explore-ros2) (frontier-based exploration) with Nav2 + SLAM Toolbox. The robot autonomously explores the environment and builds the map.
+Robot builds the map while you set goals in RViz. No pre-built map needed — SLAM handles localisation directly.
+
+**Terminal 1 — Gazebo (2×2m world):**
+```bash
+ros2 launch nav2_mobile_robot gazebo.launch.py world:=small_world.sdf
+```
+
+**Terminal 2 — SLAM:**
+```bash
+ros2 launch nav2_mobile_robot slam.launch.py use_sim_time:=true
+```
+
+**Terminal 3 — Nav2:**
+```bash
+ros2 launch nav2_mobile_robot navigation.launch.py use_sim_time:=true
+```
+
+**Terminal 4 — RViz:**
+```bash
+ros2 launch nav2_mobile_robot display.launch.py use_sim_time:=true standalone:=false
+```
+
+> Both arguments are required here. Without `use_sim_time:=true` RViz runs on wall clock and silently drops every scan and transform, so the lidar never appears. `standalone:=false` skips the robot/joint state publishers that `gazebo.launch.py` already provides. Use plain `display.launch.py` only to view the URDF with no simulator running.
+
+**Terminal 5 — LED floor (live map + path):**
+```bash
+ros2 run led_panel show_path
+```
+
+In RViz: click **Nav2 Goal** → click a point on the map → robot drives there while LED floor shows the live map and planned path in real time.
+
+> No "2D Pose Estimate" needed — SLAM knows the robot pose directly.
+
+---
+
+## Mode 2 — Autonomous Exploration + SLAM (no teleop, no RViz)
+
+Robot autonomously explores the entire environment and builds the map by itself using frontier-based exploration.
 
 ### Setup (one-time)
 
@@ -98,19 +135,17 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-### Run (4 terminals)
-
-**Terminal 1 — Gazebo simulation:**
+**Terminal 1 — Gazebo (2×2m world):**
 ```bash
-ros2 launch nav2_mobile_robot gazebo.launch.py
+ros2 launch nav2_mobile_robot gazebo.launch.py world:=small_world.sdf
 ```
 
-**Terminal 2 — SLAM Toolbox:**
+**Terminal 2 — SLAM:**
 ```bash
 ros2 launch nav2_mobile_robot slam.launch.py use_sim_time:=true
 ```
 
-**Terminal 3 — Nav2 navigation stack:**
+**Terminal 3 — Nav2:**
 ```bash
 ros2 launch nav2_mobile_robot navigation.launch.py use_sim_time:=true
 ```
@@ -120,73 +155,19 @@ ros2 launch nav2_mobile_robot navigation.launch.py use_sim_time:=true
 ros2 launch explore_lite explore.launch.py use_sim_time:=true
 ```
 
-The robot will drive itself to unexplored frontiers until the full map is built.
-
-### Save the map
-
+**Terminal 5 — LED floor (live map + path):**
 ```bash
-ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_led2
+ros2 run led_panel show_path
 ```
 
-### Display on LED floor
+The robot drives itself to unexplored frontiers until the full map is built. LED floor shows the map growing in real time with the current path overlaid.
+
+### Save the map when done
 
 ```bash
-ros2 run led_panel show_map
-ros2 run led_panel panel_manager
+ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_$(date +%H%M) --ros-args -p use_sim_time:=true
+
 ```
-
----
-
-## Manual Teleop + SLAM
-
-**Terminal 1 — Gazebo:**
-```bash
-ros2 launch nav2_mobile_robot gazebo.launch.py
-```
-
-**Terminal 2 — SLAM:**
-```bash
-ros2 launch nav2_mobile_robot slam.launch.py use_sim_time:=true
-```
-
-**Terminal 3 — Drive the robot:**
-```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-```
-Keys: `i` forward, `,` back, `j` left, `l` right, `k` stop. Press `z` to reduce speed first.
-
-**Save map when done:**
-```bash
-ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_led2
-```
-
----
-
-## Autonomous Navigation (pre-built map)
-
-Requires a saved map. Localises with AMCL, then accepts Nav2 goals from RViz.
-
-**Terminal 1 — Gazebo:**
-```bash
-ros2 launch nav2_mobile_robot gazebo.launch.py
-```
-
-**Terminal 2 — Map server + AMCL:**
-```bash
-ros2 launch nav2_mobile_robot amcl.launch.py
-```
-
-**Terminal 3 — Nav2:**
-```bash
-ros2 launch nav2_mobile_robot navigation.launch.py use_sim_time:=true
-```
-
-**Terminal 4 — RViz:**
-```bash
-ros2 launch nav2_mobile_robot display.launch.py
-```
-
-In RViz: set **2D Pose Estimate** → then click **Nav2 Goal** to send the robot to any location.
 
 ---
 

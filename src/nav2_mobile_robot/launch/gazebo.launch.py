@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
-from launch.substitutions import Command, PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from ament_index_python.packages import get_package_share_directory
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
@@ -9,6 +9,13 @@ import os
 
 
 def generate_launch_description():
+
+    world = LaunchConfiguration('world')
+    declare_world = DeclareLaunchArgument(
+        'world',
+        default_value='maze.sdf',
+        description='Gazebo world file (e.g. maze.sdf or small_world.sdf)'
+    )
 
     xacro_path = "nav2_mobile_robot.xacro"
 
@@ -69,7 +76,7 @@ def generate_launch_description():
                 )
             ]
         ),
-        launch_arguments=[("gz_args", [" -r -v 4 maze.sdf"])],
+        launch_arguments=[("gz_args", [" -r -v 4 ", world])],
     )
 
     bridge = Node(
@@ -105,6 +112,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            declare_world,
             gz_resource_path,
             robot_state_publisher_node,
             spawn,

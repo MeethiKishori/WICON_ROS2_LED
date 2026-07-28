@@ -39,16 +39,18 @@
       <ray>
         <scan>
           <horizontal>
-            <samples>640</samples>
+            <!-- 3600 samples = 0.1 deg. Needed so adjacent rays stay within one
+                 0.003125m map cell out to ~1.8m; 640 only covered 0.32m. -->
+            <samples>3600</samples>
             <resolution>1</resolution>
-            <min_angle>-1.396263</min_angle>
-            <max_angle>1.396263</max_angle>
+            <min_angle>-3.141593</min_angle>
+            <max_angle>3.141593</max_angle>
           </horizontal>
           <vertical>
-            <samples>16</samples>
+            <samples>1</samples>
             <resolution>1</resolution>
-            <min_angle>-0.261799</min_angle>
-            <max_angle>0.261799</max_angle>
+            <min_angle>0</min_angle>
+            <max_angle>0</max_angle>
           </vertical>
         </scan>
         <range>
