@@ -25,7 +25,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'leds = led_panel.leds:main',
             'draw_cv = led_panel.draw_cv:main',
             'show_map = led_panel.show_map:main',
             'show_path = led_panel.show_path:main',
