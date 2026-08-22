@@ -55,6 +55,96 @@ Needs the acados setup below; the rest of the workspace runs without it.
 
 ---
 
+## Requirements — what to install before running
+
+Verified on this machine: **Ubuntu 24.04.4**, **ROS 2 Jazzy**, **Python 3.12**,
+**gz sim 8.11 (Harmonic)**, delivered through the ROS `ros-gz` vendor packages
+(no separate `gz-harmonic` apt package needed).
+
+### Do I need the venv?
+
+**Only for the MPC.** Everything else runs on plain system Python.
+
+| What you want to run | apt packages | venv + acados |
+|---|---|---|
+| `show_map`, `show_path`, `draw_cv` (LED floor) | base | no |
+| Mode 1 — Nav2 goal + SLAM | base | no |
+| Mode 2 — autonomous exploration | base + `m-explore-ros2` source | no |
+| Mode 3 — acados MPC | base | **yes** |
+
+The LED and Nav2 nodes only use `rclpy`, `cv2`, `numpy` and `yaml`, all of which
+are apt packages already visible to system Python. Adding a venv there buys
+nothing and costs you an activation step in every terminal.
+
+### Base install (needed for everything)
+
+```bash
+sudo apt update
+sudo apt install -y \
+  ros-jazzy-navigation2 ros-jazzy-nav2-bringup \
+  ros-jazzy-slam-toolbox \
+  ros-jazzy-ros-gz-sim ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-image \
+  ros-jazzy-rviz2 ros-jazzy-xacro \
+  ros-jazzy-robot-state-publisher ros-jazzy-joint-state-publisher \
+  python3-opencv python3-yaml python3-numpy python3-colcon-common-extensions
+```
+
+`navigation2` pulls in `nav2_planner`, `nav2_lifecycle_manager`,
+`nav2_map_server` and `nav2_mppi_controller`, all of which this workspace uses.
+
+Check the essentials are present:
+```bash
+ros2 pkg list | grep -E "nav2_planner|slam_toolbox|ros_gz_bridge"
+gz sim --versions
+```
+
+### Mode 2 only — exploration source dependency
+
+```bash
+cd ~/shubham/ros2_led_floor/src
+git clone https://github.com/robo-friends/m-explore-ros2.git
+cd .. && colcon build --symlink-install
+```
+
+### Mode 3 only — acados + venv
+
+Not in apt and not in the ROS repos. The C library is a source build, the
+Python wrapper comes from pip, and the pip part goes in a venv so it cannot
+disturb the apt-managed Python that every other node uses. Full steps in
+[Python environment (venv)](#python-environment-venv) and
+[MPC control with acados](#mpc-control-with-acados-optional) below.
+
+Short version:
+```bash
+# 1. C library
+cd ~ && git clone https://github.com/acados/acados.git
+cd acados && git submodule update --init --recursive
+mkdir -p build && cd build && cmake -DACADOS_WITH_QPOASES=ON .. && make install -j4
+
+# 2. env vars (~/.bashrc)
+export ACADOS_SOURCE_DIR=$HOME/acados
+export LD_LIBRARY_PATH=$ACADOS_SOURCE_DIR/lib:$LD_LIBRARY_PATH
+
+# 3. venv + python wrapper
+python3 -m venv --system-site-packages ~/ros_venv
+source ~/ros_venv/bin/activate
+pip install $HOME/acados/interfaces/acados_template
+
+# 4. every terminal that runs the MPC
+export PYTHONPATH=$HOME/ros_venv/lib/python3.12/site-packages:$PYTHONPATH
+```
+
+Three details that will cost you an hour each if missed:
+
+- The venv **must** be created with `--system-site-packages`, or `rclpy`
+  disappears inside it.
+- `ros2 run` ignores an activated venv — colcon hard-codes `#!/usr/bin/python3`
+  into the generated executables, so you must export `PYTHONPATH` instead.
+- Install `acados_template` **without** `-e`; editable installs rely on `.pth`
+  files, which are skipped when a venv is reached via `PYTHONPATH`.
+
+---
+
 ## Build
 
 Always build from the **workspace root**:
