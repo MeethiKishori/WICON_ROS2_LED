@@ -3,3 +3,8 @@ install/
 log/
 .vscode/
 learning.md
+
+# acados generated solver code (written into the CWD of whoever runs the node)
+c_generated_code/
+codegen_*/
+acados_ocp_*.json

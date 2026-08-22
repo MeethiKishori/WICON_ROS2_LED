@@ -1,0 +1,7 @@
+# acados build output
+c_generated_code/
+*.json
+
+# python bytecode
+__pycache__/
+*.pyc

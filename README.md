@@ -40,6 +40,11 @@ Differential drive robot simulation with full Nav2 stack.
 ### `rosbot` (ament_cmake)
 C++ package skeleton — placeholder for hardware interface code.
 
+### `mpc_control` (ament_python)
+Standalone acados MPC path follower — an alternative to nav2's `controller_server`.
+Self-contained: no other package depends on it, and it modifies none of them.
+Needs the acados setup below; the rest of the workspace runs without it.
+
 ---
 
 ## Topics
@@ -62,6 +67,110 @@ source install/setup.bash
 ```
 
 > Never run `colcon build` from inside `src/` — it creates stale build artifacts that break `ament_index` path resolution.
+
+---
+
+## Python environment (venv)
+
+Extra Python packages (acados, casadi, …) go in a venv — **never** `pip install --break-system-packages`, which shadows apt-installed packages like `numpy` for every ROS node on the system.
+
+The venv must be created with `--system-site-packages`, otherwise `rclpy` and the ROS message packages are invisible inside it.
+
+**One-time setup:**
+```bash
+python3 -m venv --system-site-packages ~/ros_venv
+source ~/ros_venv/bin/activate
+```
+
+**Every terminal that runs a node needing these packages:**
+```bash
+export PYTHONPATH=$HOME/ros_venv/lib/python3.12/site-packages:$PYTHONPATH
+source /opt/ros/jazzy/setup.bash
+source ~/shubham/ros2_led_floor/install/setup.bash
+```
+
+> Activating the venv is **not** enough for `ros2 run`. colcon generates the
+> executables in `install/*/lib/<pkg>/` with a hard-coded `#!/usr/bin/python3`
+> shebang, so they ignore `VIRTUAL_ENV` and never see the venv's packages.
+> Exporting `PYTHONPATH` puts the venv on the search path of the system
+> interpreter, which is what actually runs the node.
+
+Check it worked:
+```bash
+python3 -c "import rclpy, acados_template; print('rclpy + acados ok')"
+```
+
+Nodes that only use `rclpy`, `cv2`, `numpy` and `yaml` (`show_map`, `show_path`, `draw_cv`) need no venv — plain system Python is enough.
+
+---
+
+## MPC control with acados (optional)
+
+acados is not in apt or the ROS repos. The C library is built from source; only the Python wrapper comes from pip.
+
+**1. Build the C library:**
+```bash
+cd ~
+git clone https://github.com/acados/acados.git
+cd acados
+git submodule update --init --recursive
+mkdir -p build && cd build
+cmake -DACADOS_WITH_QPOASES=ON -DACADOS_PYTHON=ON ..
+make install -j4
+```
+
+**2. Environment** — add to `~/.bashrc`:
+```bash
+export ACADOS_SOURCE_DIR=$HOME/acados
+export LD_LIBRARY_PATH=$ACADOS_SOURCE_DIR/lib:$LD_LIBRARY_PATH
+```
+
+> `LD_LIBRARY_PATH` is **not** set by sourcing `install/setup.bash`. Without it the node fails with `libacados.so: cannot open shared object file`.
+
+**3. Python wrapper — inside the venv:**
+```bash
+source ~/ros_venv/bin/activate
+pip install $HOME/acados/interfaces/acados_template
+python3 -c "from acados_template import AcadosOcp; print('acados ok')"
+```
+
+> Install it **without** `-e`. An editable install only drops an `.egg-link`
+> plus an `easy-install.pth` entry, and `.pth` files are ignored when the venv
+> is reached through `PYTHONPATH` rather than being activated — so `ros2 run`
+> fails with `ModuleNotFoundError: No module named 'acados_template'`.
+
+The first solver build downloads `t_renderer` — accept the prompt, or place the binary from the acados releases page in `$ACADOS_SOURCE_DIR/bin` and `chmod +x` it.
+
+**4. Generate the solver (once), then run the node:**
+```bash
+colcon build --symlink-install --packages-select mpc_control
+source install/setup.bash
+ros2 run mpc_control build_solver      # emits c_generated_code/ in the CWD
+ros2 run mpc_control mpc_control
+```
+
+The controller lives in its own package, `mpc_control`, and touches nothing in `led_panel` or `nav2_mobile_robot`. It subscribes to `/odom` and `/plan` and publishes `/cmd_vel`.
+
+> Run it **instead of** nav2's `controller_server`, not alongside — both drive the same `/cmd_vel` chain (see `cmd_vel_out_topic` in `config/nav.yaml`). You still need `planner_server` for `/plan`.
+
+Tuning lives in `src/mpc_control/mpc_control/mpc_model.py`: horizon (`N`, `TF`), limits (`V_MIN`, `V_MAX`, `W_MAX`, taken from `nav.yaml`), and the cost weights `W` / `W_e`.
+
+Measured on a straight path plus 90 deg and 180 deg turns:
+
+| solver | worst solve time | converged | path error |
+|---|---|---|---|
+| `SQP_RTI` (default) | 0.8 ms | yes, every step | 0.02-0.05 m |
+| `SQP`, 50 iterations | 21 ms | never (status 2) | 0.07-0.08 m |
+| `SQP`, 200 iterations | 93 ms | never (status 2) | 0.07-0.08 m |
+
+`SQP_RTI` wins on all three counts, so it is the default. Full `SQP` is
+selectable via `build_solver(nlp_solver='SQP', max_iter=...)` for offline
+experiments, but at 93 ms it cannot hold the 20 Hz control period.
+
+The reference yaw must be unwrapped before it reaches the solver (`unwrap()` in
+`mpc_model.py`, applied in the node). Without it the yaw cost is a raw
+least-squares term, and a reference of `+3.1` against a state of `-3.1` reads as
+a 6.2 rad error, which spins the robot the long way round.
 
 ---
 
@@ -168,6 +277,99 @@ The robot drives itself to unexplored frontiers until the full map is built. LED
 ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_$(date +%H%M) --ros-args -p use_sim_time:=true
 
 ```
+
+---
+
+## Mode 3 — acados MPC instead of nav2's controller
+
+Same Gazebo + SLAM + RViz setup as Mode 1, but the MPC drives the robot rather
+than `controller_server`. Requires the acados setup above.
+
+Every terminal below needs the venv on the path first:
+```bash
+export PYTHONPATH=$HOME/ros_venv/lib/python3.12/site-packages:$PYTHONPATH
+export ACADOS_SOURCE_DIR=$HOME/acados
+export LD_LIBRARY_PATH=$ACADOS_SOURCE_DIR/lib:$LD_LIBRARY_PATH
+source /opt/ros/jazzy/setup.bash
+source ~/shubham/ros2_led_floor/install/setup.bash
+```
+(The first three lines are only needed for terminal 4.)
+
+**Terminal 1 — Gazebo (2×2m world):**
+```bash
+ros2 launch nav2_mobile_robot gazebo.launch.py world:=small_world.sdf
+```
+
+**Terminal 2 — SLAM:**
+```bash
+ros2 launch nav2_mobile_robot slam.launch.py use_sim_time:=true
+```
+
+**Terminal 3 — RViz:**
+```bash
+ros2 launch nav2_mobile_robot display.launch.py use_sim_time:=true standalone:=false
+```
+
+**Terminal 4 — MPC stack (planner + goal bridge + controller):**
+```bash
+ros2 launch mpc_control mpc.launch.py
+```
+
+> Note the missing `use_sim_time:=true`, unlike every other mode. The
+> `ros_gz_bridge` in `gazebo.launch.py` bridges lidar, odom, cmd_vel and joint
+> states but **not `/clock`** — check with `ros2 topic info /clock`, which
+> reports 0 publishers. With `use_sim_time:=true` and no clock publisher the
+> ROS clock is frozen at 0, so timer callbacks never fire: the node starts,
+> subscribes and logs normally, but never publishes a command. Subscription
+> callbacks still run, which makes it look alive.
+>
+> To use sim time properly, add this line to the bridge arguments in
+> `gazebo.launch.py` and relaunch everything:
+> ```python
+> "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
+> ```
+> Then `use_sim_time:=true` works here as well.
+
+**Terminal 5 — LED floor (optional):**
+```bash
+ros2 run led_panel show_path
+```
+
+In RViz use the **2D Goal Pose** tool (not "Nav2 Goal" — that calls the
+bt_navigator, which is not running in this mode). The goal goes to
+`/goal_pose`, `goal_to_plan` asks `planner_server` for a path, and the MPC
+follows it.
+
+### What runs, and what deliberately does not
+
+| node | source | why |
+|---|---|---|
+| `planner_server` | nav2 | global paths, configured from `nav.yaml` |
+| `lifecycle_manager_mpc` | nav2 | activates `planner_server` |
+| `goal_to_plan` | `mpc_control` | `/goal_pose` → `ComputePathToPose` → `/plan` |
+| `mpc_control` | `mpc_control` | `/plan` + `/odom` → `/cmd_vel` |
+| ~~`controller_server`~~ | — | replaced by the MPC |
+| ~~`velocity_smoother`~~, ~~`collision_monitor`~~, ~~`behavior_server`~~ | — | all write to the `/cmd_vel` chain and would fight the MPC |
+
+Do **not** run `navigation.launch.py` alongside this — it starts every node in
+that list and the robot receives two conflicting command streams.
+
+Check what is actually driving the robot:
+```bash
+ros2 topic info /cmd_vel --verbose | grep -A2 "Publisher"
+```
+There should be exactly one publisher, `mpc_control`.
+
+### Limitations
+
+- **No obstacle avoidance in the controller.** The MPC cost only tracks the
+  path; obstacles are handled upstream by the planner's global costmap. A
+  person stepping in front of the robot mid-path will be hit. Adding
+  `ocp.model.con_h_expr` constraints is the fix.
+- **No recovery behaviours.** If the planner cannot find a path, the robot
+  simply stops — there is no spin/backup/wait fallback.
+- **Replanning is time-based** (1 s in `goal_to_plan.py`), not triggered by the
+  map changing.
 
 ---
 
