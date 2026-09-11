@@ -49,7 +49,7 @@
 
   <xacro:macro name="wheel" params="side parent translateX translateY">
 
-    <link name="${side}_wheel">
+    <link name="${prefix}${side}_wheel">
       <visual>
         <origin xyz="0 0 0" rpy="${PI/2} 0 0 " />
         <geometry>
@@ -70,9 +70,9 @@
       </inertial>
     </link>
 
-    <joint name="${side}_wheel_joint" type="continuous">
+    <joint name="${prefix}${side}_wheel_joint" type="continuous">
       <parent link="${parent}"/>
-      <child link="${side}_wheel"/>
+      <child link="${prefix}${side}_wheel"/>
       <origin xyz="0 ${translateY} 0" rpy="0 0 0" />
       <axis xyz="0 1 0" rpy="0 0 0" />
       <limit effort="100" velocity="100"/>

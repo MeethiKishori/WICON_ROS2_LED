@@ -14,6 +14,8 @@ setup(
             [
                 "launch/display.launch.py",
                 "launch/gazebo.launch.py",
+                "launch/multi_gazebo.launch.py",
+                "launch/multi_nav2.launch.py",
                 "launch/slam.launch.py",
                 "launch/map_server.launch.py",
                 "launch/amcl.launch.py",
@@ -36,6 +38,8 @@ setup(
                 "map/map_led.yaml",
                 "map/map_led2.pgm",
                 "map/map_led2.yaml",
+                "map/map_2156.pgm",
+                "map/map_2156.yaml",
             ],
         ),
     ],
@@ -47,6 +51,8 @@ setup(
     license="TODO: License declaration",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [],
+        "console_scripts": [
+            "serial_driver = nav2_mobile_robot.serial_driver:main",
+        ],
     },
 )

@@ -24,7 +24,7 @@ from launch.substitutions import (
     PythonExpression,
     PathJoinSubstitution,
 )
-from launch_ros.actions import LoadComposableNodes, SetParameter
+from launch_ros.actions import LoadComposableNodes, PushROSNamespace, SetParameter
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode, ParameterFile
 from nav2_common.launch import RewrittenYaml
@@ -127,6 +127,7 @@ def generate_launch_description():
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(["not ", use_composition])),
         actions=[
+            PushROSNamespace(namespace),
             SetParameter("use_sim_time", use_sim_time),
             Node(
                 package="nav2_controller",
@@ -240,6 +241,7 @@ def generate_launch_description():
     load_composable_nodes = GroupAction(
         condition=IfCondition(use_composition),
         actions=[
+            PushROSNamespace(namespace),
             SetParameter("use_sim_time", use_sim_time),
             LoadComposableNodes(
                 target_container=container_name_full,
