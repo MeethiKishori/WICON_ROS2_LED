@@ -40,6 +40,8 @@ setup(
                 "map/map_led2.yaml",
                 "map/map_2156.pgm",
                 "map/map_2156.yaml",
+                "map/small_world.pgm",
+                "map/small_world.yaml",
             ],
         ),
     ],
@@ -53,6 +55,8 @@ setup(
     entry_points={
         "console_scripts": [
             "serial_driver = nav2_mobile_robot.serial_driver:main",
+            "peer_obstacles = nav2_mobile_robot.peer_obstacles:main",
+            "make_world_map = nav2_mobile_robot.make_world_map:main",
         ],
     },
 )

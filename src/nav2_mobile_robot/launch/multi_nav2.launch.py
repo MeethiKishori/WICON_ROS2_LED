@@ -142,8 +142,11 @@ def generate_launch_description():
             DeclareLaunchArgument("robots", default_value="r1,r2"),
             DeclareLaunchArgument(
                 "map",
-                default_value=os.path.join(pkg, "map_2156.yaml"),
-                description="Shared static map of the 2x2 m world.",
+                default_value=os.path.join(pkg, "small_world.yaml"),
+                description="Shared static map. small_world.yaml is generated from the\n"
+                "world geometry by make_world_map; the SLAM maps (map_2156 etc.) stop\n"
+                "1-2 cm short of the north and east walls, which floods the planner\n"
+                "with worldToMap failures.",
             ),
             map_server,
             map_lifecycle,

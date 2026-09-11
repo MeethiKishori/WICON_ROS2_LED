@@ -34,8 +34,18 @@ Differential drive robot simulation with full Nav2 stack.
 | `map_server.launch.py` | `ros2 launch nav2_mobile_robot map_server.launch.py` | Serve a saved map |
 | `amcl.launch.py` | `ros2 launch nav2_mobile_robot amcl.launch.py` | Localisation with AMCL |
 | `navigation.launch.py` | `ros2 launch nav2_mobile_robot navigation.launch.py` | Full Nav2 autonomous navigation |
+| `multi_gazebo.launch.py` | `ros2 launch nav2_mobile_robot multi_gazebo.launch.py` | N namespaced robots in one Gazebo world |
+| `multi_nav2.launch.py` | `ros2 launch nav2_mobile_robot multi_nav2.launch.py` | One Nav2 stack per namespaced robot |
 
 > Alongside a running Gazebo, every launch file above except `gazebo.launch.py` needs `use_sim_time:=true`, and `display.launch.py` also needs `standalone:=false`. See Mode 1 for the exact commands.
+
+**Multi-robot nodes:**
+
+| Node | Command | Description |
+|---|---|---|
+| `serial_driver` | `ros2 run nav2_mobile_robot serial_driver` | Sends goals to one robot at a time, waits for each to finish |
+| `peer_obstacles` | `ros2 run nav2_mobile_robot peer_obstacles` | Shares robot poses into every other robot's costmap |
+| `make_world_map` | `ros2 run nav2_mobile_robot make_world_map` | Regenerates `small_world.pgm` from the world geometry |
 
 ### `rosbot` (ament_cmake)
 C++ package skeleton — placeholder for hardware interface code.
@@ -171,6 +181,111 @@ ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_$(date +
 
 ---
 
+## Mode 3 — Multiple robots, serial movement
+
+Two or three namespaced robots in the 2×2 m world. Only **one robot moves at a
+time**: `serial_driver` sends a goal, waits for that robot to finish, then moves
+on to the next. No traffic manager, no priorities, no yielding — serial movement
+needs none of that.
+
+Uses stock Nav2 (MPPI from `config/nav.yaml`). Nothing here touches `mpc_control`.
+
+**Terminal 1 — Gazebo with N robots:**
+```bash
+ros2 launch nav2_mobile_robot multi_gazebo.launch.py robots:=r1,r2
+```
+Add `headless:=-s` to run without the Gazebo GUI. Up to four robots
+(`robots:=r1,r2,r3`) — spawn poses are pre-validated for this world.
+
+**Terminal 2 — one Nav2 stack per robot:**
+```bash
+ros2 launch nav2_mobile_robot multi_nav2.launch.py robots:=r1,r2
+```
+
+**Terminal 3 — make the robots visible to each other:**
+```bash
+ros2 run nav2_mobile_robot peer_obstacles --ros-args -p robots:="[r1, r2]"
+```
+
+**Terminal 4 — drive them, one at a time:**
+```bash
+ros2 run nav2_mobile_robot serial_driver --ros-args -p robots:="[r1, r2]" -p rounds:=2
+```
+
+The driver prints a summary when it finishes:
+```
+robot     goals   ok  failed   mean s
+r1            2    2       0     13.1
+r2            2    2       0      8.5
+```
+A failed or timed-out goal is the room telling you it is too tight.
+
+> The robot list must match in all four commands.
+
+### Why each piece is needed
+
+**`peer_obstacles` is not optional.** The lidar scan plane sits 0.2 m above
+`base_link` while the tallest part of a robot reaches only 0.075 m, so the robots
+are invisible to each other. Without this node the moving robot drives straight
+through the parked ones — measured: r1 shoved r2 from x=0.70 to x=0.825, pinning
+it against the east wall. Peer awareness comes over the network, not the sensor,
+exactly as in a real fleet.
+
+**The map is generated, not SLAM'd.** `multi_nav2.launch.py` defaults to
+`map/small_world.yaml`, built from the world geometry by `make_world_map`. The
+SLAM maps of this room (`map_2156` and friends) stop 1.1 cm short of the north
+wall and 1.7 cm short of the east wall, so rays aimed at those walls land outside
+the grid — 2.68 million `worldToMap failed` errors in one two-robot run, and no
+wall for the planner to plan against on two sides. The generated map is also
+0.01 m/px instead of 0.003, which is 9× fewer costmap cells per robot.
+
+**Localisation is a static identity transform**, not AMCL or SLAM. Gazebo's
+odometry plugin reports pose in world coordinates (a robot spawned at
+(−0.70, 0.70) publishes exactly that), and the map sits at the world origin, so
+`map → rX/odom` is identity and there is nothing to correct. That keeps a spacing
+experiment free of localisation error. Swap in `amcl.launch.py` per namespace if
+you want the noise back.
+
+**Goals avoid the parking spots.** Robots park on whatever goal they last
+reached, so `serial_driver` skips any waypoint within 0.45 m of a parked peer:
+```
+r1: skipping (+0.00, -0.75) -- r2 is parked there
+r1 -> (-0.75, +0.00)
+```
+Without this, a robot is sent onto a peer and rams it — the goal still reports
+success while the victim ends up 0.30 m off its own goal.
+
+### How much room is there, really
+
+Measured on this world. Robot body radius is 0.15 m, Nav2 footprint 0.18 m:
+
+| | value |
+|---|---|
+| Room interior | 1.95 × 1.95 m = 3.80 m² |
+| Navigable (robot centre may sit here) | **1.96 m²** |
+| Wide enough for two robots abreast | 0.85 m² (43.5% of navigable) |
+| Wide enough for three abreast | 0.21 m² (10.8%) |
+| Lane beside each box, robot centre | **11.5 cm** |
+
+Two robots fit and can pass in the open middle. Three is ~26% occupancy with
+single-file lanes at both boxes, so expect them to spend most of their time
+queueing. If three robots need to move *concurrently*, the lever is the robot —
+dropping `base_radius` in `urdf/nav2_mobile_robot.xacro` from 0.15 to ~0.09 more
+than doubles the two-abreast area.
+
+### Namespacing notes
+
+Each robot gets every link, joint, TF frame and Gazebo topic prefixed:
+`r1/base_link`, `/r1/lidar`, `/r1/cmd_vel`, `/r1/tf`. With no prefix the xacro
+generates the original single-robot names unchanged, so Modes 1 and 2 are
+unaffected.
+
+`config/nav.yaml` stays the single source of truth — `multi_nav2.launch.py`
+rewrites its absolute topics and bare frame names per robot at launch rather than
+keeping a second params file that would drift.
+
+---
+
 ## Features
 
 - 640×640 LED floor driven via ROS2 image topics
@@ -179,6 +294,7 @@ ros2 run nav2_map_server map_saver_cli -f src/nav2_mobile_robot/map/map_$(date +
 - Interactive path drawing via OpenCV mouse input
 - Differential drive robot simulation with LiDAR-based SLAM
 - Autonomous navigation with Nav2
+- Multi-robot: N namespaced robots, one Nav2 stack each, serial goal sequencing
 - RViz visualisation
 
 ## Tools & Technologies
