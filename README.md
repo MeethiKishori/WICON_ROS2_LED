@@ -480,3 +480,16 @@ There should be exactly one publisher, `mpc_control`.
 - SLAM Toolbox
 - Nav2 stack
 - OpenCV (`draw_cv`, `show_map`)
+
+
+
+#task is to include 2-3rosbots
+
+challenges
+for current map, only 47cm is available and robot is itself 15cm , deadlock is challenge
+footprint is .18m
+ navigation area is just 2m² out of 4m²
+ 2 robots need .3m clearance 
+
+1. lidar scans at .2m above baselink hence it will never see each other.
+2. room is 2x2 and 
