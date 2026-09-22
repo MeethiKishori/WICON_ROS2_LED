@@ -1,0 +1,50 @@
+# Waypoints and routes for fleet_manager. Nothing about the room's geometry
+# needs to appear here -- Nav2 plans around obstacles on its own, and
+# fleet_manager only has to keep two robots off the same waypoint.
+
+fleet_manager:
+  ros__parameters:
+    use_sim_time: true
+
+    platforms:            # name -> [x, y, yaw]
+      P1: [0.00, 0.75, -1.571]
+      P2: [0.75, 0.75, -2.356]
+      P3: [0.75, 0.00, 3.142]     # shared by both routes
+      P4: [0.75, -0.75, 2.356]
+      P5: [0.00, -0.75, 1.571]
+      P6: [-0.75, -0.75, 0.785]
+      P7: [-0.75, 0.00, 0.000]
+
+    routes:
+      r1: [P1, P2, P3, P4]
+      r2: [P5, P6, P3, P7]
+
+    loop: true
+    dwell: 1.5             # s parked at each waypoint before the next leg
+
+    # Two robots are 0.36 m across. A robot won't be sent to a waypoint that
+    # is this close to where a peer is standing or already heading.
+    min_separation: 0.55
+
+    tick_period: 1.0        # s between checks
+    goal_timeout: 120.0      # s before a stuck goal is cancelled and retried
+    retry_delay: 3.0         # s to wait before retrying a failed/blocked leg
+
+    # Escape hysteresis, read off the costmap's own inflation rings:
+    #   cost 99 = closer to an obstacle than robot_radius (inner ring)
+    #   cost  0 = fully outside inflation_radius          (outer ring)
+    # A robot inside the inner ring cannot be rescued by Nav2: its recoveries
+    # are goal-directed, collision_monitor brakes it, and Spin/BackUp refuse
+    # to run with an obstacle that close. So back it out to free space first,
+    # then resume the route. Clearing only at cost 0 is the hysteresis -- the
+    # gradient between the rings stops it chattering at the boundary.
+    # Trigger on the OUTER ring, not the inner one. Measured: once a robot is
+    # at cost 99 it cannot be moved at all -- a nav goal, a direct cmd_vel and
+    # Nav2's own BackUp action all refuse (BackUp aborts, status 6), because
+    # every one of them collision-checks first. At cost 50-98 the robot is
+    # still outside its footprint radius, so it can be driven clear. That is
+    # the whole point of the buffer: act while there is still room to act.
+    escape_cost: 50          # cost at the robot that counts as too close
+    escape_after: 5.0        # s lingering there before backing out
+    escape_search: 0.70      # m to look for a free spot to retreat to
+    escape_attempts: 3       # failed escapes before the waypoint is skipped

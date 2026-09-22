@@ -63,6 +63,9 @@ controller_server:
       ax_min: -3.0
       ay_max: 3.0
       az_max: 3.5
+      # Stock values. Tightening these to 0.12/0.20 to fit the narrow
+      # corridors made things worse, not better: MPPI could no longer explore
+      # enough to find any viable trajectory and stalled on open legs too.
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
@@ -166,8 +169,17 @@ local_costmap:
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.25  # 2x2m room: 0.70 inflates every cell, leaving no free space
+        # Inflation cost is 252*exp(-f*(d-robot_radius)). At f=3.0 a robot
+        # 0.40 m from anything still sits at cost 130, and the most open
+        # point in this 1.95 m room is only 0.585 m from an obstacle -- so
+        # the whole room read as expensive and MPPI crawled at 0.03 m/s.
+        # f=10 keeps the penalty local: 0.30 m -> 76, 0.40 m -> 28.
+        cost_scaling_factor: 10.0
+        # 0.25 left NO free-cost space in the 11.5 cm lane between box1 and
+        # the east wall (inflation from both sides overlapped), so MPPI had no
+        # clean line through and goals there aborted. 0.20 opens a 7.5 cm
+        # channel and still stays above robot_radius 0.18.
+        inflation_radius: 0.20
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -191,7 +203,7 @@ local_costmap:
         peers:
           # Peers are invisible to the lidar (scan plane 0.2 m, robot tops out at
           # 0.075 m), so peer_obstacles republishes their outlines here.
-          # observation_persistence 0.0 keeps only the newest cloud; serial_driver
+          # observation_persistence 0.0 keeps only the newest cloud; peer_obstacles
           # also clears both costmaps before each goal so a parked robot that has
           # since moved cannot leave a ghost obstacle in a 2 m room.
           topic: /peer_points
@@ -236,7 +248,7 @@ global_costmap:
         peers:
           # Peers are invisible to the lidar (scan plane 0.2 m, robot tops out at
           # 0.075 m), so peer_obstacles republishes their outlines here.
-          # observation_persistence 0.0 keeps only the newest cloud; serial_driver
+          # observation_persistence 0.0 keeps only the newest cloud; peer_obstacles
           # also clears both costmaps before each goal so a parked robot that has
           # since moved cannot leave a ghost obstacle in a 2 m room.
           topic: /peer_points
@@ -253,8 +265,17 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.25  # 2x2m room: 0.70 inflates every cell, leaving no free space
+        # Inflation cost is 252*exp(-f*(d-robot_radius)). At f=3.0 a robot
+        # 0.40 m from anything still sits at cost 130, and the most open
+        # point in this 1.95 m room is only 0.585 m from an obstacle -- so
+        # the whole room read as expensive and MPPI crawled at 0.03 m/s.
+        # f=10 keeps the penalty local: 0.30 m -> 76, 0.40 m -> 28.
+        cost_scaling_factor: 10.0
+        # 0.25 left NO free-cost space in the 11.5 cm lane between box1 and
+        # the east wall (inflation from both sides overlapped), so MPPI had no
+        # clean line through and goals there aborted. 0.20 opens a 7.5 cm
+        # channel and still stays above robot_radius 0.18.
+        inflation_radius: 0.20
       always_send_full_costmap: True
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.

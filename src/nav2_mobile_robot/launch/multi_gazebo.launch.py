@@ -36,9 +36,10 @@ SPAWN_POSES = [
     (-0.70, -0.70, 0.785),
 ]
 
-# TF and /tf_static are absolute in every ROS node, so they must be pushed into
-# the robot's namespace explicitly. See navigation.launch.py, which does the same.
-TF_REMAP = [("/tf", "tf"), ("/tf_static", "tf_static")]
+# Every link and joint is already prefixed (r1/base_link, r2/base_link ...), so
+# all robots can share the global /tf without colliding. That lets ONE RViz show
+# the whole fleet, instead of one window per robot subscribed to its own /rX/tf.
+TF_REMAP = []
 
 
 def robot_actions(context, *args, **kwargs):
@@ -88,9 +89,9 @@ def robot_actions(context, *args, **kwargs):
                     f"/{name}/odom/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
                     f"/{name}/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
                 ],
-                # The odometry plugin's TF stream has to land in the robot's own
-                # /rX/tf, not the global /tf.
-                remappings=[(f"/{name}/odom/tf", f"/{name}/tf")],
+                # The odometry plugin publishes its TF on a side topic; land it
+                # on the global /tf like every other TF source.
+                remappings=[(f"/{name}/odom/tf", "/tf")],
             )
         )
 

@@ -3,9 +3,9 @@
 Localization is a static identity map -> rX/odom transform, not AMCL or SLAM:
 gz-sim-odometry-publisher-system reports pose in *world* coordinates (verified:
 a robot spawned at (-0.70, 0.70) publishes exactly that on /rX/odom), and
-map_2156.yaml places the map at the world origin. So odom already is the map
+small_world.yaml places the map at the world origin. So odom already is the map
 frame and there is nothing to correct. That keeps the fit experiment free of
-localization error -- swap in amcl.launch.py per namespace if you want the noise.
+localization error.
 
 nav.yaml is the single source of truth. It is written for one robot, with absolute
 topics (/lidar, /odom) and bare frames (base_link, odom), so it is rewritten per
@@ -93,7 +93,6 @@ def robot_actions(context, *args, **kwargs):
                 output="screen",
                 parameters=[{"use_sim_time": True}],
                 arguments=["--frame-id", "map", "--child-frame-id", f"{name}/odom"],
-                remappings=[("/tf", f"/{name}/tf"), ("/tf_static", f"/{name}/tf_static")],
             )
         )
         actions.append(
@@ -144,9 +143,7 @@ def generate_launch_description():
                 "map",
                 default_value=os.path.join(pkg, "small_world.yaml"),
                 description="Shared static map. small_world.yaml is generated from the\n"
-                "world geometry by make_world_map; the SLAM maps (map_2156 etc.) stop\n"
-                "1-2 cm short of the north and east walls, which floods the planner\n"
-                "with worldToMap failures.",
+                "world geometry, so it reaches the walls exactly.",
             ),
             map_server,
             map_lifecycle,

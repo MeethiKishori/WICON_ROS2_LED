@@ -61,7 +61,11 @@ def generate_launch_description():
     # https://github.com/ros/robot_state_publisher/pull/30
     # TODO(orduno) Substitute with `PushNodeRemapping`
     #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
+    # Frames are prefixed per robot (r1/base_link, r2/base_link ...), so the whole
+    # fleet can share the global /tf with no collision, and one RViz can show them
+    # all. Restore [("/tf", "tf"), ("/tf_static", "tf_static")] here if you ever
+    # want each robot isolated in its own /rX/tf instead.
+    remappings = []
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"autostart": autostart}
