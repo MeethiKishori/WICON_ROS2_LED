@@ -16,9 +16,6 @@
       <frame_id>${prefix}odom</frame_id>
       <child_frame_id>${prefix}base_link</child_frame_id>
 
-      <!-- Odometry comes from gz-sim-odometry-publisher-system (odom_plugin.xacro)
-           at 50 Hz. DiffDrive must NOT also publish, or two publishers race on
-           the same topic and TF. DiffDrive here only actuates the wheels. -->
       <publish_odom>false</publish_odom>
       <publish_odom_tf>false</publish_odom_tf>
 

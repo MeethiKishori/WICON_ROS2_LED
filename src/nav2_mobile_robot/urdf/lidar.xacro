@@ -4,9 +4,6 @@
   xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:property name="PI" value="3.14159"/>
 
-  <!-- 3600 samples (0.1 deg) is what a single robot uses so adjacent rays stay
-       inside one 0.003125 m map cell out to ~1.8 m. With N robots the GPU lidar
-       cost multiplies, so the multi-robot launch lowers this. -->
   <xacro:arg name="lidar_samples" default="3600" />
 
   <link name="${prefix}lidar_link">

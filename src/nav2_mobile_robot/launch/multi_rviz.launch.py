@@ -1,18 +1,3 @@
-"""One RViz for the whole fleet, with a goal tool you can click for each robot.
-
-All robots share the global /tf because their frames are prefixed
-(r1/base_link, r2/base_link ...), so a single window can show every robot. The
-per-robot displays -- RobotModel, LaserScan, Path -- are cloned out of
-rviz/rviz.rviz once per robot and pointed at that robot's topics; Grid and Map
-stay shared.
-
-Pair it with fleet.launch.py, which drives both robots through their
-waypoints:
-
-    ros2 launch nav2_mobile_robot multi_rviz.launch.py robots:=r1,r2
-    ros2 launch nav2_mobile_robot fleet.launch.py robots:=r1,r2
-"""
-
 import copy
 import os
 import tempfile
@@ -24,77 +9,106 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# Displays that exist once for the fleet rather than once per robot.
+
+PACKAGE_NAME = "nav2_mobile_robot"
+
 SHARED_DISPLAYS = {"rviz_default_plugins/Grid", "rviz_default_plugins/Map"}
-# Distinct colours so you can tell the robots apart at a glance (r, g, b).
 COLOURS = ["255; 85; 0", "0; 170; 255", "0; 255; 127", "255; 0; 212"]
 
 
-def _namespace_topics(node, ns):
-    """Point every absolute topic in a display at one robot's namespace."""
-    if isinstance(node, dict):
-        return {
-            key: (
-                f"/{ns}{value}"
-                if key == "Value" and isinstance(value, str) and value.startswith("/")
-                else _namespace_topics(value, ns)
-            )
-            for key, value in node.items()
-        }
-    if isinstance(node, list):
-        return [_namespace_topics(v, ns) for v in node]
-    return node
+def read_robot_names(context):
+    robots_text = LaunchConfiguration("robots").perform(context)
+
+    robot_names = []
+    for piece in robots_text.split(","):
+        name = piece.strip()
+        if name != "":
+            robot_names.append(name)
+    return robot_names
 
 
-def _config_for(names, src, outdir):
-    with open(src) as fh:
-        cfg = yaml.safe_load(fh)
+def add_namespace(display, ns):
+    if isinstance(display, dict):
+        result = {}
+        for key, value in display.items():
+            is_topic = key == "Value" and isinstance(value, str) and value.startswith("/")
+            if is_topic:
+                result[key] = f"/{ns}{value}"
+            else:
+                result[key] = add_namespace(value, ns)
+        return result
 
-    manager = cfg["Visualization Manager"]
-    original = manager["Displays"]
+    if isinstance(display, list):
+        result = []
+        for item in display:
+            result.append(add_namespace(item, ns))
+        return result
 
-    displays = [d for d in original if d.get("Class") in SHARED_DISPLAYS]
-    for index, name in enumerate(names):
-        for template in original:
-            if template.get("Class") in SHARED_DISPLAYS:
+    return display
+
+
+def is_shared(display):
+    return display.get("Class") in SHARED_DISPLAYS
+
+
+def write_fleet_config(robot_names, source_file, output_folder):
+    with open(source_file) as f:
+        config = yaml.safe_load(f)
+
+    manager = config["Visualization Manager"]
+    original_displays = manager["Displays"]
+
+    displays = []
+    for display in original_displays:
+        if is_shared(display):
+            displays.append(display)
+
+    for index, name in enumerate(robot_names):
+        for template in original_displays:
+            if is_shared(template):
                 continue
-            display = _namespace_topics(copy.deepcopy(template), name)
+
+            display = add_namespace(copy.deepcopy(template), name)
             display["Name"] = f"{name} {template.get('Name', '')}".strip()
+
             if display.get("Class") == "rviz_default_plugins/Path":
                 display["Color"] = COLOURS[index % len(COLOURS)]
+
             displays.append(display)
 
     manager["Displays"] = displays
-    # The one frame every robot shares.
     manager["Global Options"]["Fixed Frame"] = "map"
 
-    path = os.path.join(outdir, "rviz_fleet.rviz")
-    with open(path, "w") as fh:
-        yaml.safe_dump(cfg, fh, default_flow_style=False)
-    return path
+    output_file = os.path.join(output_folder, "rviz_fleet.rviz")
+    with open(output_file, "w") as f:
+        yaml.safe_dump(config, f, default_flow_style=False)
+    return output_file
 
 
 def rviz_node(context, *args, **kwargs):
-    pkg = get_package_share_directory("nav2_mobile_robot")
-    names = [n.strip() for n in LaunchConfiguration("robots").perform(context).split(",") if n.strip()]
-    config = _config_for(names, os.path.join(pkg, "rviz.rviz"), tempfile.mkdtemp(prefix="rviz_fleet_"))
+    package_folder = get_package_share_directory(PACKAGE_NAME)
+    source_file = os.path.join(package_folder, "rviz.rviz")
+    output_folder = tempfile.mkdtemp(prefix="rviz_fleet_")
 
-    return [
-        Node(
-            package="rviz2",
-            executable="rviz2",
-            name="rviz2",
-            output="screen",
-            parameters=[{"use_sim_time": True}],
-            arguments=["-d", config],
-        )
-    ]
+    robot_names = read_robot_names(context)
+    config_file = write_fleet_config(robot_names, source_file, output_folder)
+
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        parameters=[{"use_sim_time": True}],
+        arguments=["-d", config_file],
+    )
+    return [rviz]
 
 
 def generate_launch_description():
-    return LaunchDescription(
-        [
-            DeclareLaunchArgument("robots", default_value="r1,r2"),
-            OpaqueFunction(function=rviz_node),
-        ]
-    )
+    robots_argument = DeclareLaunchArgument("robots", default_value="r1,r2")
+    start_rviz = OpaqueFunction(function=rviz_node)
+
+    return LaunchDescription([
+        robots_argument,
+        start_rviz,
+    ])

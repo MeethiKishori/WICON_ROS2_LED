@@ -12,14 +12,6 @@ bt_navigator:
       plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
     navigate_through_poses:
       plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
-    # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
-    # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
-    # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
-    # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
-
-    # plugin_lib_names is used to add custom BT plugins to the executor (vector of strings).
-    # Built-in plugins are added automatically
-    # plugin_lib_names: []
 
     error_code_names:
       - compute_path_error_code
@@ -34,38 +26,28 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugins: ["progress_checker"]
-    goal_checker_plugins: ["general_goal_checker"] # "precise_goal_checker"
+    goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
     use_realtime_priority: false
 
-    # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.1  # 0.5 is a quarter of a 2x2m room; fires on normal manoeuvring
+      required_movement_radius: 0.1
       movement_time_allowance: 10.0
-    # Goal checker parameters
-    #precise_goal_checker:
-    #  plugin: "nav2_controller::SimpleGoalChecker"
-    #  xy_goal_tolerance: 0.25
-    #  yaw_goal_tolerance: 0.25
-    #  stateful: True
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.10  # 0.25 is 1/8 of a 2x2m room
+      xy_goal_tolerance: 0.10
       yaw_goal_tolerance: 0.25
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 30  # 1.5s horizon; 56 looked 1.4m ahead, wider than the room
+      time_steps: 30
       model_dt: 0.05
       batch_size: 2000
       ax_max: 3.0
       ax_min: -3.0
       ay_max: 3.0
       az_max: 3.5
-      # Stock values. Tightening these to 0.12/0.20 to fit the narrow
-      # corridors made things worse, not better: MPPI could no longer explore
-      # enough to find any viable trajectory and stalled on open legs too.
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
@@ -74,7 +56,7 @@ controller_server:
       vy_max: 0.5
       wz_max: 1.9
       iteration_count: 1
-      prune_distance: 0.6  # was 1.7, longer than the room is wide
+      prune_distance: 0.6
       transform_tolerance: 0.1
       temperature: 0.3
       gamma: 0.015
@@ -149,10 +131,6 @@ controller_server:
         threshold_to_consider: 0.5
         max_angle_to_furthest: 1.0
         mode: 0
-      # TwirlingCritic:
-      #   enabled: true
-      #   twirling_cost_power: 1
-      #   twirling_cost_weight: 10.0
 
 local_costmap:
   local_costmap:
@@ -165,20 +143,11 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.18  # base_radius 0.15 in the xacro, plus margin
+      robot_radius: 0.18
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        # Inflation cost is 252*exp(-f*(d-robot_radius)). At f=3.0 a robot
-        # 0.40 m from anything still sits at cost 130, and the most open
-        # point in this 1.95 m room is only 0.585 m from an obstacle -- so
-        # the whole room read as expensive and MPPI crawled at 0.03 m/s.
-        # f=10 keeps the penalty local: 0.30 m -> 76, 0.40 m -> 28.
         cost_scaling_factor: 10.0
-        # 0.25 left NO free-cost space in the 11.5 cm lane between box1 and
-        # the east wall (inflation from both sides overlapped), so MPPI had no
-        # clean line through and goals there aborted. 0.20 opens a 7.5 cm
-        # channel and still stays above robot_radius 0.18.
         inflation_radius: 0.20
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
@@ -201,11 +170,6 @@ local_costmap:
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
         peers:
-          # Peers are invisible to the lidar (scan plane 0.2 m, robot tops out at
-          # 0.075 m), so peer_obstacles republishes their outlines here.
-          # observation_persistence 0.0 keeps only the newest cloud; peer_obstacles
-          # also clears both costmaps before each goal so a parked robot that has
-          # since moved cannot leave a ghost obstacle in a 2 m room.
           topic: /peer_points
           data_type: "PointCloud2"
           marking: True
@@ -227,7 +191,7 @@ global_costmap:
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
-      robot_radius: 0.18  # base_radius 0.15 in the xacro, plus margin
+      robot_radius: 0.18
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -246,11 +210,6 @@ global_costmap:
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
         peers:
-          # Peers are invisible to the lidar (scan plane 0.2 m, robot tops out at
-          # 0.075 m), so peer_obstacles republishes their outlines here.
-          # observation_persistence 0.0 keeps only the newest cloud; peer_obstacles
-          # also clears both costmaps before each goal so a parked robot that has
-          # since moved cannot leave a ghost obstacle in a 2 m room.
           topic: /peer_points
           data_type: "PointCloud2"
           marking: True
@@ -265,25 +224,9 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        # Inflation cost is 252*exp(-f*(d-robot_radius)). At f=3.0 a robot
-        # 0.40 m from anything still sits at cost 130, and the most open
-        # point in this 1.95 m room is only 0.585 m from an obstacle -- so
-        # the whole room read as expensive and MPPI crawled at 0.03 m/s.
-        # f=10 keeps the penalty local: 0.30 m -> 76, 0.40 m -> 28.
         cost_scaling_factor: 10.0
-        # 0.25 left NO free-cost space in the 11.5 cm lane between box1 and
-        # the east wall (inflation from both sides overlapped), so MPPI had no
-        # clean line through and goals there aborted. 0.20 opens a 7.5 cm
-        # channel and still stays above robot_radius 0.18.
         inflation_radius: 0.20
       always_send_full_costmap: True
-
-# The yaml_filename does not need to be specified since it going to be set by defaults in launch.
-# If you'd rather set it in the yaml, remove the default "map" value in the tb3_simulation_launch.py
-# file & provide full path to map below. If CLI map configuration or launch default is provided, that will be used.
-# map_server:
-#   ros__parameters:
-#     yaml_filename: ""
 
 map_saver:
   ros__parameters:

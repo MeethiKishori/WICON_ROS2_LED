@@ -3,9 +3,6 @@
 <robot name="nav_robot"
   xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <!-- Multi-robot support: every link, joint, TF frame and Gazebo topic is
-       prefixed so N robots can coexist in one /tf tree and one DDS graph.
-       Single robot (both empty) reproduces the original names exactly. -->
   <xacro:arg name="prefix" default="" />
   <xacro:arg name="ns" default="" />
   <xacro:property name="prefix" value="$(arg prefix)" />
@@ -19,15 +16,9 @@
   <xacro:property name="wheel_height" value="0.02" />
   <xacro:property name="wheel_mass" value="2.5" />
 
-
   <xacro:include filename="nav2_mobile_robot_macro.xacro" />
   <xacro:include filename="gazebo_control.xacro" />
   <xacro:include filename="lidar.xacro" />
-
-  <!-- <xacro:include filename="ros2_control.xacro" /> -->
-
-
-
 
   <link name="${prefix}base_link">
     <inertial>
