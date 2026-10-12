@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'led_pannel'
+package_name = 'led_panel'
 
 setup(
     name=package_name,
@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/config', ['config/panels.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,8 +25,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'leds = led_pannel.leds:main',
-            'draw_cv = led_pannel.draw_cv:main',
+            'draw_cv = led_panel.draw_cv:main',
+            'show_map = led_panel.show_map:main',
+            'show_path = led_panel.show_path:main',
         ],
     },
 )

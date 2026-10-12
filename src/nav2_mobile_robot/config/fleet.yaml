@@ -1,0 +1,30 @@
+fleet_manager:
+  ros__parameters:
+    use_sim_time: true
+
+    platforms:
+      P1: [0.00, 0.75, -1.571]
+      P2: [0.75, 0.75, -2.356]
+      P3: [0.75, 0.00, 3.142]
+      P4: [0.75, -0.75, 2.356]
+      P5: [0.00, -0.75, 1.571]
+      P6: [-0.75, -0.75, 0.785]
+      P7: [-0.75, 0.00, 0.000]
+
+    routes:
+      r1: [P1, P2, P3, P4]
+      r2: [P5, P6, P3, P7]
+
+    loop: true
+    dwell: 1.5
+
+    min_separation: 0.55
+
+    tick_period: 1.0
+    goal_timeout: 120.0
+    retry_delay: 3.0
+
+    escape_cost: 50
+    escape_after: 5.0
+    escape_search: 0.70
+    escape_attempts: 3

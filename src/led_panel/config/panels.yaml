@@ -1,0 +1,8 @@
+canvas:
+  width: 640
+  height: 640
+
+panel_size:
+  width: 64    # pixels per panel
+  height: 64
+  physical_cm: 19  # physical size in cm (for reference)

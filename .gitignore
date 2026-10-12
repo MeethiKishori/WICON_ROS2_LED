@@ -2,3 +2,7 @@ build/
 install/
 log/
 .vscode/
+learning.md
+__pycache__/
+*.pyc
+src/m-explore-ros2/
